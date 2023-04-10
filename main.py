@@ -3,21 +3,28 @@ import pandas
 import random
 
 BACKGROUND_COLOR = "#B1DDC6"
-# ---------------------------- CREATE FLASH CARD ------------------------------- #
-df = pandas.read_csv("data/finnish_words.csv")
-word_list = df.to_dict(orient="records")
 current_card = {}
+to_learn = []
+# ---------------------------- CREATE FLASH CARD ------------------------------- #
+try:
+    df = pandas.read_csv("data/words_to_learn.csv")
+except FileNotFoundError:
+    original_data = pandas.read_csv("data/finnish_words.csv")
+    to_learn = original_data.to_dict(orient="records")
+else:
+    to_learn = df.to_dict(orient="records")
+# to_learn is a list of dict
 
 
 def next_card():
     global current_card, flip_timer
     window.after_cancel(flip_timer)
-    current_card = random.choice(word_list)
+    current_card = random.choice(to_learn)
     finnish_word = current_card["Finnish"]
     canvas.itemconfig(card_title, text="Finnish", fill="black")
     canvas.itemconfig(card_word, text=finnish_word, fill="black")
     canvas.itemconfig(canvas_image, image=front_img)
-    flip_timer = window.after(3000, func=flip_card)
+    flip_timer = window.after(5000, func=flip_card)
 
 
 def flip_card():
@@ -26,12 +33,21 @@ def flip_card():
     canvas.itemconfig(canvas_image, image=back_img)
 
 
+# ---------------------------- SAVE PROGRESS ------------------------------- #
+def is_known():
+    to_learn.remove(current_card)
+    next_card()
+    words_to_learn = pandas.DataFrame(to_learn)
+    words_to_learn.to_csv("data/words_to_learn.csv", index=False)
+    print(len(to_learn))
+
+
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
 window.title("Flashy")
 window.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
 
-flip_timer = window.after(3000, func=flip_card)
+flip_timer = window.after(5000, func=flip_card)
 
 canvas = Canvas(width=800, height=526, bg=BACKGROUND_COLOR, highlightthickness=0)
 front_img = PhotoImage(file="images/card_front.png")
@@ -48,7 +64,7 @@ button.grid(column=0, row=1)
 
 
 check_image = PhotoImage(file="images/right.png")
-button = Button(image=check_image, bg=BACKGROUND_COLOR, highlightthickness=0, command=next_card)
+button = Button(image=check_image, bg=BACKGROUND_COLOR, highlightthickness=0, command=is_known)
 button.grid(column=1, row=1)
 
 next_card()
